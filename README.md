@@ -1,3 +1,3 @@
 
 
-[Effrctive C++](./Effrctive C++/Effrctive C++.md)
+[Effrctive C++](./Effective C++/Effective C++.md)
