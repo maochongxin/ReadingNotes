@@ -289,15 +289,112 @@ processWidget(pw, priority());
 模版与范型编程
 --
 
-+ 隐式接口与编译器多态
++ 了解隐式接口与编译器多态
+
+面向对象 class 的设计考虑 **显式接口** 和 **运行时多态**
+
+模版编程的 template 考虑 **隐式接口** 和 **编译期多态**
+
+对类而言，显式接口是由函数签名表征的，运行时多态由虚函数实现；
+对模板而言，隐式接口是由表达式的合法性表征的，编译期多态由模板初始化和函数重载的解析实现。
+
+```C++
+class Widget {
+    explicit Widget() {}
+    ~Widget() {}
+
+    virtual std::size_t size() const;
+    virtual void normalize();
+    void swap(const Widget& rhs);
+
+
+
+	/*
+		根据 doProcessing 的函数签名, w 的类型被声明为 Widget, 所以 w 必须支持 Widget 的接口
+
+		因为 Widget 的某些成员函数是 virtual , 所以会运行期根据 w 的类型来决定调用哪个函数
+	*/
+	void doProcessing(Widget& w) {
+		if (w.size() > 10 && w != someNastyWidget) {
+			Widget temp(w);
+			temp.normalize();
+			temp.swap(w);
+		}
+	}
+
+	/*
+		这里 w 必须接受哪一种接口是根据 w 身上的操作来决定, 也就是模版并不关心 w 是否存在这种接口, 只要表达式本身合法, 便有可能通过编译期的特化以及一系列C++的隐式转化来实现正确的程序.
+
+		加诸于 template 参数身上的隐式接口就像加诸于 class 对象身上的显式接口一样真实, 两者都在编译期完成检查. 如果在 template 中使用了不支持 template 所要求的隐式接口的对象, 也会通不过编译.
+	*/
+    template <class T>
+    void doProcessing(T& w) {
+        if (w.size() > 10 && w != someNastyWidget) {
+            Widget temp(w);
+            temp.normalize();
+            temp.swap(w);
+        }
+    }
+};
+
+```
 
 + typename 双重意义
 
+移植性: 不同编译器对于 typename 的支持不同, 旧版本的编译器甚至会拒绝typename, 所以 typename 和嵌套从属类型会在移植方面出现问题
+
+当用 typename 声明 template 参数:
+
+typename 与 class 可互换
+
+当面临 “嵌套从属类型”:
+
+例如以下代码:
+
+```C++
+template <typename C>
+void print2nd(const C& container) {
+	if (container.size() >= 2) {
+		C::const_iterator iter(container.begin());
+		++iter;
+		int value = *iter;
+		std::cout << value;
+	}
+}
+```
+
+iter 的类型是 C::const_iterator 但是实际是什么取决于C是什么.
+
+template 内出现的名称如果相依于某个 template 参数, 称之为 **从属名称**, 如果从属名称在 class 内呈嵌套状, 则称之为 **嵌套从属类型名称**.
+
+嵌套从属名称可能会导致解析困难, 因为代码中的 C::const_iterator 并不能确定是不是一个类型. 而只有在 C::const_iterator 是一个类型的时候才可以.
+
+一般性的规则就是当在 template 中 指涉一个嵌套从属类型名称时 就在前面加一个 typename. 例外就是在base class list 里指定的类型名称前不能加 typename, 还有在 初始化列表里使用的 嵌套从属类型名称前 不能加 typename.
+
+例如:
+
+```C++
+template <typename T>
+class Derived: public Base<T>::Nested {		//不加 typename
+public:
+	explicit Derived(int x): Base<T>::Nested(x) {	//不加typename
+		typename Base<T>::Nested temp;
+		...
+	}
+	...
+};
+
+```
+
 + 处理模版化基类内的名称
+
+
+
+
 
 + 与参数无关的代码抽离template
 
-+ 成员函数模版接受所有兼容类型
++ 运用成员函数模版接受所有兼容类型
 
 + 需要类型转换时请为模版定义非成员函数
 
